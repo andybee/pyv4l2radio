@@ -34,9 +34,6 @@ import struct
 import time
 
 
-__VERSION__ = 0.1
-
-
 # kernel definitions for ioctl commands
 _IOC_NRBITS   = 8
 _IOC_TYPEBITS = 8

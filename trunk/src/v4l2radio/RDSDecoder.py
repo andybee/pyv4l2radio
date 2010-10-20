@@ -26,9 +26,6 @@ import struct
 import threading
 
 
-__VERSION__ = 0.1
-
-
 # V4L2 offset name values
 _V4L2_RDS_OFFSET_NAME_BLOCK_A     = 0
 _V4L2_RDS_OFFSET_NAME_BLOCK_B     = 1
