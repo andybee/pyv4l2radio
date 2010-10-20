@@ -59,7 +59,7 @@ class RadioDNSRDSListener(RDSDecoderListener):
 
     def __check_radiodns_values(self):
         
-        frequency = self.radio.get_frequency()
+        frequency = str(self.radio.get_frequency() / 10).zfill(5) 
         pi = self.radio.rds.pi
         ecc = self.radio.rds.ecc
         
@@ -67,12 +67,12 @@ class RadioDNSRDSListener(RDSDecoderListener):
         
         if ecc and pi:
             radiodns_fqdn = "%s.%s.%s.fm.radiodns.org" % (frequency,
-                                                               pi[2:],
-                                                               ecc[2:])
+                                                          pi[2:],
+                                                          pi[2:3] + ecc[2:])
         else:
             radiodns_fqdn = "%s.%s.%s.fm.radiodns.org" % (frequency,
-                                                               pi[2:],
-                                                               self.country)
+                                                          pi[2:],
+                                                          self.country)
         print "RadioDNS FQSN:", radiodns_fqdn
         
         try:
