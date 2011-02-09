@@ -57,6 +57,10 @@ class RDSDecoderListener(object):
     using Decoder.set_listener()
     """
     
+    def __init__(self, radio):
+        
+        self.__radio = radio
+        
     def on_pi_change(self, pi):
         """
         Called when the PI code changes
@@ -78,6 +82,12 @@ class RDSDecoderListener(object):
     def on_radiotext_message(self, message):
         """
         Called when a new RadioText message is received
+        """
+        pass
+    
+    def on_reset(self):
+        """
+        Called when the RDS Decoder is reset, usually when changing the tuner's frequency
         """
         pass
     
@@ -170,6 +180,9 @@ class RDSDecoder(object):
         self.__current_group = {}
         self.__ps_segments = SegmentedString(8)
         self.__rt_segments = SegmentedString()
+        
+        if self.__listener:
+            self.__listener.on_reset()
         
         self.start()
         
