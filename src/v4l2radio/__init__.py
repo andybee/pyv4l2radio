@@ -23,4 +23,4 @@ from RDSDecoder import *
 from RadioDNSRDSListener import *
 
 
-__VERSION__ = 0.2
+__VERSION__ = 0.1

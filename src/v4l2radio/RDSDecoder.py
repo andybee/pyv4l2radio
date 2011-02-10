@@ -26,6 +26,9 @@ import struct
 import threading
 
 
+__VERSION__ = 0.1
+
+
 # V4L2 offset name values
 _V4L2_RDS_OFFSET_NAME_BLOCK_A     = 0
 _V4L2_RDS_OFFSET_NAME_BLOCK_B     = 1
@@ -33,6 +36,9 @@ _V4L2_RDS_OFFSET_NAME_BLOCK_C     = 2
 _V4L2_RDS_OFFSET_NAME_BLOCK_D     = 3
 _V4L2_RDS_OFFSET_NAME_BLOCK_ALT_C = 4
 _V4L2_RDS_OFFSET_NAME_BLOCK_E     = 5
+
+# the device we directly talk to
+_RADIO_DEV = "/dev/radio0"
 
 
 class RDSDecoderError(StandardError):
@@ -54,33 +60,27 @@ class RDSDecoderListener(object):
     using Decoder.set_listener()
     """
     
-    def on_pi_change(self, decoder, pi):
+    def on_pi_change(self, pi):
         """
         Called when the PI code changes
         """
         pass
     
-    def on_ecc_change(self, decoder, ecc):
+    def on_ecc_change(self, ecc):
         """
         Called when the ECC changes
         """
         pass
     
-    def on_ps_change(self, decoder, ps):
+    def on_ps_change(self, ps):
         """
         Called when the PS value changes
         """
         pass
     
-    def on_rt_change(self, decoder, message):
+    def on_radiotext_message(self, message):
         """
         Called when a new RadioText message is received
-        """
-        pass
-    
-    def on_reset(self, decoder):
-        """
-        Called when the RDS Decoder is reset, usually when changing the tuner's frequency
         """
         pass
     
@@ -119,17 +119,15 @@ class RDSDecoder(object):
     Class for decoding RDS data from a V4L2 FM Radio
     """
     
-    def __init__(self, radio):
+    def __init__(self):
         
-        self.radio = radio
-        
-        self.__listeners = []
+        self.__listener = None
         self.__running = None
         self.__thread = threading.Thread(None, self.__parsing_loop)
         self.__thread.daemon = True
         
         try:
-            self.__fd = open(radio.dev, 'r')
+            self.__f = open(_RADIO_DEV, "r")
         except OSError:
             raise RDSDecoderUnavailableError("Radio device for RDS Decoder is not available.")
         
@@ -176,9 +174,6 @@ class RDSDecoder(object):
         self.__ps_segments = SegmentedString(8)
         self.__rt_segments = SegmentedString()
         
-        for listener in self.__listeners:
-            listener.on_reset(self)
-        
         self.start()
         
 
@@ -190,27 +185,18 @@ class RDSDecoder(object):
         self.stop()
         
         try:
-            self.__fd.close()
+            self.__f.close()
         except IOError:
             pass
         
 
-    def add_listener(self, listener):
+    def set_listener(self, listener):
         """
-        Adds an optional object of class RDSDecoderListener to a list of
-        listeners to be notified as and when RDS-related events occur
-        """
-        
-        self.__listeners.append(listener)
-        
-
-    def remove_listener(self, listener):
-        """
-        Removes object of class RDSDecoderListener from the list of listeners
-        to be notified as and when RDS-related events occur
+        Sets an optional object of class DecoderListener to be notified as and
+        when RDS-related events occur
         """
         
-        self.__listeners.remove(listener)
+        self.__listener = listener;
         
 
     def __parsing_loop(self):
@@ -223,7 +209,7 @@ class RDSDecoder(object):
             self.__current_group = {}
             
             for i in range(0, 4):
-                block = self.__fd.read(3)
+                block = self.__f.read(3)
                 data, info = struct.unpack("HB", block)
                 
                 checkword = info & 7
@@ -345,9 +331,8 @@ class RDSDecoder(object):
         
         if self.pi != pi:
             self.pi = pi
-            if self.__running:
-                for listener in self.__listeners:
-                    listener.on_pi_change(self, pi)
+            if self.__listener and self.__running:
+                self.__listener.on_pi_change(pi)
                 
 
     def __set_ecc(self, ecc):
@@ -359,9 +344,8 @@ class RDSDecoder(object):
         
         if self.ecc != ecc:
             self.ecc = ecc
-            if self.__running:
-                for listener in self.__listeners:
-                    listener.on_ecc_change(self, ecc)
+            if self.__listener and self.__running:
+                self.__listener.on_ecc_change(ecc)
                 
 
     def __set_ps(self, ps):
@@ -373,9 +357,8 @@ class RDSDecoder(object):
         
         if self.ps != ps:
             self.ps = ps
-            if self.__running:
-                for listener in self.__listeners:
-                    listener.on_ps_change(self, ps)
+            if self.__listener and self.__running:
+                self.__listener.on_ps_change(ps)
                 
 
     def __set_rt(self, rt):
@@ -387,7 +370,6 @@ class RDSDecoder(object):
         
         if self.rt != rt:
             self.rt = rt
-            if self.__running:
-                for listener in self.__listeners:
-                    listener.on_rt_change(self, rt)
+            if self.__listener and self.__running:
+                self.__listener.on_rt_change(rt)
                 
