@@ -72,6 +72,9 @@ _V4L2_CTRL_CLASS_USER = 0x00980000
 _V4L2_CID_BASE        = _V4L2_CTRL_CLASS_USER | 0x900
 _V4L2_CID_FM_BAND     = _V4L2_CID_BASE + 0
 
+# the device we directly talk to
+_RADIO_DEV = "/dev/radio0"
+
 # signal scanning parameters
 _SIGNAL_LOCK_TIME = 0.1
 _SIGNAL_TRIES = 1
@@ -108,17 +111,17 @@ class FMRadio(object):
     FM_BAND_EUR = 0
     FM_BAND_JPN = 1
     
-    def __init__(self, dev="/dev/radio0", enable_rds=True):
+
+    def __init__(self, enable_rds = True):
         
-        self.dev = dev
         self.__is_scanning = False
         
         try:
-            self.__fd = os.open(self.dev, os.O_RDONLY)
+            self.__fd = os.open(_RADIO_DEV, os.O_RDONLY)
         except OSError:
             raise FMRadioUnavailableError("FM radio is not available.")
         
-        self.rds = RDSDecoder(self) if enable_rds else None
+        self.rds = RDSDecoder() if enable_rds else None
         
         self.__tuner = self.__get_tuner()
         self.__factor = (self.__tuner["capability"] & _V4L2_TUNER_CAP_LOW) \
@@ -238,9 +241,6 @@ class FMRadio(object):
         
         self.cancel_scanning()
         self.__set_frequency(freq)
-        
-        if self.rds and freq is not 0:
-            self.rds.reset()
         
 
     def __set_frequency(self, freq):
