@@ -30,7 +30,7 @@ def main():
     print "Tuning to %0.2f Mhz" % frequency
     
     tuner.set_frequency(frequency * 1000.0)
-    tuner.rds.set_listener(RadioDNSRDSListener(tuner, _RDNS_LOCALE))
+    tuner.rds.add_listener(RadioDNSRDSListener(_RDNS_LOCALE))
     
     # keep the app running
     while 1:

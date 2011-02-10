@@ -110,14 +110,15 @@ class FMRadio(object):
     
     def __init__(self, dev="/dev/radio0", enable_rds=True):
         
+        self.dev = dev
         self.__is_scanning = False
         
         try:
-            self.__fd = os.open(dev, os.O_RDONLY)
+            self.__fd = os.open(self.dev, os.O_RDONLY)
         except OSError:
             raise FMRadioUnavailableError("FM radio is not available.")
         
-        self.rds = RDSDecoder() if enable_rds else None
+        self.rds = RDSDecoder(self) if enable_rds else None
         
         self.__tuner = self.__get_tuner()
         self.__factor = (self.__tuner["capability"] & _V4L2_TUNER_CAP_LOW) \
