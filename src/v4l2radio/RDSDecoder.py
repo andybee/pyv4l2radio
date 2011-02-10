@@ -34,9 +34,6 @@ _V4L2_RDS_OFFSET_NAME_BLOCK_D     = 3
 _V4L2_RDS_OFFSET_NAME_BLOCK_ALT_C = 4
 _V4L2_RDS_OFFSET_NAME_BLOCK_E     = 5
 
-# the device we directly talk to
-_RADIO_DEV = "/dev/radio0"
-
 
 class RDSDecoderError(StandardError):
     """
@@ -126,7 +123,7 @@ class RDSDecoder(object):
     Class for decoding RDS data from a V4L2 FM Radio
     """
     
-    def __init__(self):
+    def __init__(self, dev="/dev/radio0"):
         
         self.__listener = None
         self.__running = None
@@ -134,7 +131,7 @@ class RDSDecoder(object):
         self.__thread.daemon = True
         
         try:
-            self.__f = open(_RADIO_DEV, "r")
+            self.__f = open(dev, 'r')
         except OSError:
             raise RDSDecoderUnavailableError("Radio device for RDS Decoder is not available.")
         
