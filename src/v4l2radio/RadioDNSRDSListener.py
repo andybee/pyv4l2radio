@@ -31,53 +31,65 @@ class RadioDNSRDSListener(RDSDecoderListener):
     RadioDNS service resolution
     """
     
-    def __init__(self, radio, country = 'gb'):
+    def __init__(self, country = 'gb'):
         
-        self.radio = radio
-        self.country = country
+        RDSDecoderListener.__init__(self)
         
-
-    def on_pi_change(self, pi):
-        
-        self.__check_radiodns_values()
+        self.__country = country
+        self.on_reset(None)
         
 
-    def on_ecc_change(self, ecc):
+    def on_pi_change(self, decoder, pi):
         
-        self.__check_radiodns_values()
-        
-
-    def on_ps_change(self, ps):
-        
-        print "PS:", ps
+        self.__check_radiodns_values(decoder.radio)
         
 
-    def on_rt_change(self, rt):
+    def on_ecc_change(self, decoder, ecc):
         
-        print "RT:", rt
+        self.__check_radiodns_values(decoder.radio)
         
 
-    def __check_radiodns_values(self):
+    def on_reset(self, decoder):
         
-        frequency = str(self.radio.get_frequency() / 10).zfill(5) 
-        pi = self.radio.rds.pi
-        ecc = self.radio.rds.ecc
+        self.authFqdn = None
+        self.apps = {}
         
-        if not pi: return
+
+    def __check_radiodns_values(self, radio):
+        
+        frequency = str(radio.get_frequency() / 10).zfill(5) 
+        pi = radio.rds.pi
+        ecc = radio.rds.ecc
+        
+        if not pi:
+            return
         
         if ecc and pi:
-            radiodns_fqdn = "%s.%s.%s.fm.radiodns.org" % (frequency,
-                                                          pi[2:],
-                                                          pi[2:3] + ecc[2:])
+            fqdn = "%s.%s.%s.fm.radiodns.org." % (frequency,
+                                                 pi[2:],
+                                                 pi[2:3] + ecc[2:])
         else:
-            radiodns_fqdn = "%s.%s.%s.fm.radiodns.org" % (frequency,
-                                                          pi[2:],
-                                                          self.country)
-        print "RadioDNS FQSN:", radiodns_fqdn
+            fqdn = "%s.%s.%s.fm.radiodns.org." % (frequency,
+                                                 pi[2:],
+                                                 self.__country)
         
         try:
-            answers = dns.resolver.query(radiodns_fqdn)
-            print "Authoritative RadioDNS FQDN:", answers[0]
-        except dns.resolver.NXDOMAIN:
-            print "RadioDNS did not recognise service parameters"
+            answers = dns.resolver.query(fqdn, "CNAME")
+            self.authFqdn = str(answers[0])[:-1]
+        except:
+            return
         
+        self.apps = {}
+        for app in ("radioepg", "radiotag", "radiovis"):
+            appFqdn = "_%s._tcp.%s" % (app, self.authFqdn)
+            try:
+                answers = dns.resolver.query(appFqdn, "SRV")
+            except:
+                continue
+            self.apps[app] = []
+            for answer in answers:
+                self.apps[app].append({"target": str(answer.target)[:-1],
+                                       "port": int(answer.port),
+                                       "priority": int(answer.priority),
+                                       "weight": int(answer.weight)})
+                
